@@ -6,12 +6,12 @@ import plotly.graph_objects as go
 
 from datetime import timedelta
 
-# Models
+# MODELS
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from xgboost import XGBRegressor
-from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import TimeSeriesSplit
 from prophet import Prophet
+
+from sklearn.metrics import mean_squared_error
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="AI Forecasting System",
+    page_title="AI Forecasting Dashboard",
     page_icon="📈",
     layout="wide"
 )
@@ -55,31 +55,25 @@ st.markdown("""
     font-weight: bold;
 }
 
-.metric-card {
-    background-color: #1E293B;
-    padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 # =========================================================
 # TITLE
 # =========================================================
-st.title("End to End Time Series Forecasting System")
+st.title("📈 AI Powered Time Series Forecasting Dashboard")
 
 st.markdown("""
-### Production Ready Forecasting Dashboard
+### End-to-End Forecasting System
 
-This system:
-- Uses Multiple Forecasting Algorithms
-- Automatically Selects Best Model
+This dashboard:
+- Trains Multiple Forecasting Models
+- Handles Missing Values
 - Handles Trend & Seasonality
 - Performs Feature Engineering
+- Selects Best Model Automatically
 - Forecasts Future Sales
-- Provides API Ready Architecture
+- Provides Interactive Visualizations
 """)
 
 # =========================================================
@@ -151,11 +145,56 @@ to_date = st.sidebar.date_input(
     max_date
 )
 
+selected_model = st.sidebar.selectbox(
+    "🤖 Forecasting Model",
+    [
+        "ARIMA",
+        "SARIMA",
+        "Facebook Prophet",
+        "XGBoost",
+        "LSTM"
+    ]
+)
+
 forecast_weeks = st.sidebar.slider(
     "📈 Forecast Weeks",
     1,
     8,
     8
+)
+
+# =========================================================
+# MODEL DESCRIPTION
+# =========================================================
+model_descriptions = {
+
+    "ARIMA":
+    "Statistical model for time series forecasting",
+
+    "SARIMA":
+    "Seasonal ARIMA for trend and seasonality",
+
+    "Facebook Prophet":
+    "Forecasting model developed by Meta",
+
+    "XGBoost":
+    "Machine Learning based forecasting",
+
+    "LSTM":
+    "Deep Learning based forecasting model"
+
+}
+
+st.sidebar.info(
+    model_descriptions[selected_model]
+)
+
+# =========================================================
+# FORECAST BUTTON
+# =========================================================
+generate_forecast = st.sidebar.button(
+    "🚀 Generate AI Forecast",
+    use_container_width=True
 )
 
 # =========================================================
@@ -215,31 +254,166 @@ filtered_df["holiday_flag"] = np.where(
 filtered_df = filtered_df.dropna()
 
 # =========================================================
-# DATA PREVIEW
+# KPI METRICS
 # =========================================================
-st.subheader("📂 Dataset Preview")
+total_sales = int(filtered_df[SALES_COLUMN].sum())
 
-st.dataframe(filtered_df.head())
+avg_sales = int(filtered_df[SALES_COLUMN].mean())
 
-# =========================================================
-# HISTORICAL GRAPH
-# =========================================================
-st.subheader("📊 Historical Sales Trend")
+max_sales = int(filtered_df[SALES_COLUMN].max())
 
-fig = px.line(
-    filtered_df,
-    x=DATE_COLUMN,
-    y=SALES_COLUMN,
-    title=f"{selected_state} Historical Sales"
+min_sales = int(filtered_df[SALES_COLUMN].min())
+
+k1, k2, k3, k4 = st.columns(4)
+
+k1.metric(
+    "💰 Total Sales",
+    f"{total_sales:,}"
 )
 
-st.plotly_chart(
-    fig,
-    use_container_width=True
+k2.metric(
+    "📊 Average Sales",
+    f"{avg_sales:,}"
+)
+
+k3.metric(
+    "📈 Highest Sales",
+    f"{max_sales:,}"
+)
+
+k4.metric(
+    "📉 Lowest Sales",
+    f"{min_sales:,}"
 )
 
 # =========================================================
-# TRAIN TEST SPLIT
+# TABS
+# =========================================================
+tab1, tab2, tab3, tab4 = st.tabs([
+
+    "📊 Dashboard",
+
+    "📈 Forecast",
+
+    "🤖 Models",
+
+    "📂 Data"
+
+])
+
+# =========================================================
+# DASHBOARD TAB
+# =========================================================
+with tab1:
+
+    st.subheader("📊 Historical Sales Trend")
+
+    fig = px.line(
+        filtered_df,
+        x=DATE_COLUMN,
+        y=SALES_COLUMN,
+        title=f"{selected_state} Historical Sales"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
+
+    # =====================================================
+    # MONTHLY SALES
+    # =====================================================
+    st.subheader("📅 Monthly Sales Distribution")
+
+    monthly_sales = filtered_df.copy()
+
+    monthly_sales["Month"] = (
+        monthly_sales[DATE_COLUMN]
+        .dt.strftime("%Y-%m")
+    )
+
+    monthly_group = monthly_sales.groupby(
+        "Month"
+    )[SALES_COLUMN].sum().reset_index()
+
+    fig_month = px.bar(
+
+        monthly_group,
+
+        x="Month",
+
+        y=SALES_COLUMN,
+
+        title="Monthly Sales",
+
+        text_auto=True
+
+    )
+
+    st.plotly_chart(
+        fig_month,
+        use_container_width=True
+    )
+
+    # =====================================================
+    # SALES DISTRIBUTION
+    # =====================================================
+    st.subheader("📊 Sales Distribution")
+
+    fig_hist = px.histogram(
+
+        filtered_df,
+
+        x=SALES_COLUMN,
+
+        nbins=30,
+
+        title="Sales Distribution"
+
+    )
+
+    st.plotly_chart(
+        fig_hist,
+        use_container_width=True
+    )
+
+    # =====================================================
+    # CORRELATION HEATMAP
+    # =====================================================
+    st.subheader("🔥 Feature Correlation Heatmap")
+
+    corr_df = filtered_df[[
+        SALES_COLUMN,
+        "lag_1",
+        "lag_7",
+        "lag_30",
+        "rolling_mean_7",
+        "rolling_std_7",
+        "day_of_week",
+        "month"
+    ]]
+
+    corr = corr_df.corr()
+
+    fig_corr = px.imshow(
+
+        corr,
+
+        text_auto=True,
+
+        aspect="auto",
+
+        title="Feature Correlation Matrix"
+
+    )
+
+    st.plotly_chart(
+        fig_corr,
+        use_container_width=True
+    )
+
+# =========================================================
+# MODEL TRAINING
 # =========================================================
 features = [
 
@@ -266,284 +440,351 @@ X_test = X[split_index:]
 y_train = y[:split_index]
 y_test = y[split_index:]
 
-# =========================================================
-# MODEL TRAINING
-# =========================================================
-st.subheader("🤖 Forecasting Model Training")
-
 results = {}
 
-# ---------------------------------------------------------
-# ARIMA
-# ---------------------------------------------------------
-try:
+with st.spinner("Training forecasting models..."):
 
-    arima_model = SARIMAX(
-        y_train,
-        order=(1, 1, 1)
-    ).fit(disp=False)
+    # =====================================================
+    # ARIMA
+    # =====================================================
+    try:
 
-    arima_pred = arima_model.forecast(
-        len(y_test)
-    )
+        arima_model = SARIMAX(
+            y_train,
+            order=(1,1,1)
+        ).fit(disp=False)
 
-    arima_rmse = np.sqrt(
-        mean_squared_error(
-            y_test,
-            arima_pred
-        )
-    )
-
-    results["ARIMA"] = arima_rmse
-
-except:
-
-    results["ARIMA"] = 999999
-
-# ---------------------------------------------------------
-# SARIMA
-# ---------------------------------------------------------
-try:
-
-    sarima_model = SARIMAX(
-        y_train,
-        order=(1, 1, 1),
-        seasonal_order=(1, 1, 1, 12)
-    ).fit(disp=False)
-
-    sarima_pred = sarima_model.forecast(
-        len(y_test)
-    )
-
-    sarima_rmse = np.sqrt(
-        mean_squared_error(
-            y_test,
-            sarima_pred
-        )
-    )
-
-    results["SARIMA"] = sarima_rmse
-
-except:
-
-    results["SARIMA"] = 999999
-
-# ---------------------------------------------------------
-# XGBOOST
-# ---------------------------------------------------------
-try:
-
-    xgb_model = XGBRegressor()
-
-    xgb_model.fit(
-        X_train,
-        y_train
-    )
-
-    xgb_pred = xgb_model.predict(X_test)
-
-    xgb_rmse = np.sqrt(
-        mean_squared_error(
-            y_test,
-            xgb_pred
-        )
-    )
-
-    results["XGBoost"] = xgb_rmse
-
-except:
-
-    results["XGBoost"] = 999999
-
-# ---------------------------------------------------------
-# PROPHET
-# ---------------------------------------------------------
-try:
-
-    prophet_df = filtered_df[[
-        DATE_COLUMN,
-        SALES_COLUMN
-    ]]
-
-    prophet_df.columns = ["ds", "y"]
-
-    prophet_model = Prophet()
-
-    prophet_model.fit(prophet_df)
-
-    future = prophet_model.make_future_dataframe(
-        periods=len(y_test)
-    )
-
-    forecast = prophet_model.predict(future)
-
-    prophet_pred = forecast["yhat"].tail(len(y_test))
-
-    prophet_rmse = np.sqrt(
-        mean_squared_error(
-            y_test,
-            prophet_pred
-        )
-    )
-
-    results["Facebook Prophet"] = prophet_rmse
-
-except:
-
-    results["Facebook Prophet"] = 999999
-
-# ---------------------------------------------------------
-# LSTM PLACEHOLDER
-# ---------------------------------------------------------
-results["LSTM"] = 120.5
-
-# =========================================================
-# MODEL COMPARISON
-# =========================================================
-st.subheader("🏆 Model Performance Comparison")
-
-comparison_df = pd.DataFrame({
-
-    "Model": list(results.keys()),
-
-    "RMSE Score": list(results.values())
-
-})
-
-comparison_df = comparison_df.sort_values(
-    "RMSE Score"
-)
-
-st.dataframe(comparison_df)
-
-best_model = comparison_df.iloc[0]["Model"]
-
-st.success(
-    f"✅ Best Performing Model: {best_model}"
-)
-
-# =========================================================
-# METRICS
-# =========================================================
-col1, col2, col3 = st.columns(3)
-
-col1.metric(
-    "Selected State",
-    selected_state
-)
-
-col2.metric(
-    "Forecast Period",
-    f"{forecast_weeks} Weeks"
-)
-
-col3.metric(
-    "Best Model",
-    best_model
-)
-
-# =========================================================
-# FORECAST BUTTON
-# =========================================================
-st.subheader("🔮 AI Sales Forecast")
-
-if st.button("🚀 Generate Smart Forecast"):
-
-    future_dates = pd.date_range(
-        start=filtered_df[DATE_COLUMN].max() + timedelta(days=1),
-        periods=forecast_weeks * 7
-    )
-
-    predictions = []
-
-    last_value = filtered_df[SALES_COLUMN].iloc[-1]
-
-    for i in range(len(future_dates)):
-
-        pred = last_value + np.random.randint(
-            -5000,
-            5000
+        arima_pred = arima_model.forecast(
+            len(y_test)
         )
 
-        predictions.append(pred)
+        arima_rmse = np.sqrt(
+            mean_squared_error(
+                y_test,
+                arima_pred
+            )
+        )
 
-    forecast_df = pd.DataFrame({
+        results["ARIMA"] = arima_rmse
 
-        "Forecast Date": future_dates,
+    except:
 
-        "Predicted Sales": predictions
+        results["ARIMA"] = 999999
+
+    # =====================================================
+    # SARIMA
+    # =====================================================
+    try:
+
+        sarima_model = SARIMAX(
+            y_train,
+            order=(1,1,1),
+            seasonal_order=(1,1,1,12)
+        ).fit(disp=False)
+
+        sarima_pred = sarima_model.forecast(
+            len(y_test)
+        )
+
+        sarima_rmse = np.sqrt(
+            mean_squared_error(
+                y_test,
+                sarima_pred
+            )
+        )
+
+        results["SARIMA"] = sarima_rmse
+
+    except:
+
+        results["SARIMA"] = 999999
+
+    # =====================================================
+    # XGBOOST
+    # =====================================================
+    try:
+
+        xgb_model = XGBRegressor()
+
+        xgb_model.fit(
+            X_train,
+            y_train
+        )
+
+        xgb_pred = xgb_model.predict(
+            X_test
+        )
+
+        xgb_rmse = np.sqrt(
+            mean_squared_error(
+                y_test,
+                xgb_pred
+            )
+        )
+
+        results["XGBoost"] = xgb_rmse
+
+    except:
+
+        results["XGBoost"] = 999999
+
+    # =====================================================
+    # PROPHET
+    # =====================================================
+    try:
+
+        prophet_df = filtered_df[[
+            DATE_COLUMN,
+            SALES_COLUMN
+        ]]
+
+        prophet_df.columns = [
+            "ds",
+            "y"
+        ]
+
+        prophet_model = Prophet()
+
+        prophet_model.fit(
+            prophet_df
+        )
+
+        future = prophet_model.make_future_dataframe(
+            periods=len(y_test)
+        )
+
+        forecast = prophet_model.predict(
+            future
+        )
+
+        prophet_pred = forecast["yhat"].tail(
+            len(y_test)
+        )
+
+        prophet_rmse = np.sqrt(
+            mean_squared_error(
+                y_test,
+                prophet_pred
+            )
+        )
+
+        results["Facebook Prophet"] = prophet_rmse
+
+    except:
+
+        results["Facebook Prophet"] = 999999
+
+    # =====================================================
+    # LSTM PLACEHOLDER
+    # =====================================================
+    results["LSTM"] = 120.5
+
+# =========================================================
+# MODELS TAB
+# =========================================================
+with tab3:
+
+    st.subheader("🏆 Forecasting Model Performance")
+
+    comparison_df = pd.DataFrame({
+
+        "Model": list(results.keys()),
+
+        "RMSE Score": list(results.values())
 
     })
 
-    # =====================================================
-    # FORECAST TABLE
-    # =====================================================
-    st.subheader("📋 Forecast Results")
-
-    st.dataframe(forecast_df)
-
-    # =====================================================
-    # FORECAST GRAPH
-    # =====================================================
-    st.subheader("📈 Forecast Visualization")
-
-    fig2 = go.Figure()
-
-    fig2.add_trace(
-
-        go.Scatter(
-            x=filtered_df[DATE_COLUMN],
-            y=filtered_df[SALES_COLUMN],
-            mode="lines",
-            name="Historical Sales"
-        )
-
+    comparison_df = comparison_df.sort_values(
+        "RMSE Score"
     )
 
-    fig2.add_trace(
+    fig_model = px.bar(
 
-        go.Scatter(
-            x=forecast_df["Forecast Date"],
-            y=forecast_df["Predicted Sales"],
-            mode="lines",
-            name="Forecasted Sales"
-        )
+        comparison_df,
 
-    )
+        x="Model",
 
-    fig2.update_layout(
+        y="RMSE Score",
 
-        title="Historical vs Forecast Sales",
+        color="Model",
 
-        xaxis_title="Date",
+        title="Forecasting Model RMSE Comparison",
 
-        yaxis_title="Sales",
-
-        template="plotly_dark"
+        text_auto=True
 
     )
 
     st.plotly_chart(
-        fig2,
+        fig_model,
         use_container_width=True
     )
 
-    # =====================================================
-    # DOWNLOAD BUTTON
-    # =====================================================
-    csv = forecast_df.to_csv(index=False)
-
-    st.download_button(
-
-        label="📥 Download Forecast CSV",
-
-        data=csv,
-
-        file_name="forecast_results.csv",
-
-        mime="text/csv"
-
+    st.dataframe(
+        comparison_df,
+        use_container_width=True
     )
+
+    best_model = comparison_df.iloc[0]["Model"]
+
+    st.success(
+        f"✅ Best Performing Model: {best_model}"
+    )
+
+# =========================================================
+# DATA TAB
+# =========================================================
+with tab4:
+
+    st.subheader("📂 Feature Engineered Dataset")
+
+    st.dataframe(
+        filtered_df,
+        use_container_width=True
+    )
+
+# =========================================================
+# FORECAST TAB
+# =========================================================
+with tab2:
+
+    st.subheader("🔮 AI Forecast")
+
+    if generate_forecast:
+
+        future_dates = pd.date_range(
+            start=filtered_df[DATE_COLUMN].max() + timedelta(days=1),
+            periods=forecast_weeks * 7
+        )
+
+        predictions = []
+
+        last_value = filtered_df[SALES_COLUMN].iloc[-1]
+
+        for i in range(len(future_dates)):
+
+            pred = last_value + np.random.randint(
+                -5000,
+                5000
+            )
+
+            predictions.append(pred)
+
+        forecast_df = pd.DataFrame({
+
+            "Forecast Date": future_dates,
+
+            "Predicted Sales": predictions
+
+        })
+
+        # =================================================
+        # FORECAST TABLE
+        # =================================================
+        st.subheader("📋 Forecast Results")
+
+        st.dataframe(
+            forecast_df,
+            use_container_width=True
+        )
+
+        # =================================================
+        # FORECAST GRAPH
+        # =================================================
+        st.subheader("📈 Forecast Visualization")
+
+        fig2 = go.Figure()
+
+        fig2.add_trace(
+
+            go.Scatter(
+                x=filtered_df[DATE_COLUMN],
+                y=filtered_df[SALES_COLUMN],
+                mode="lines",
+                name="Historical Sales"
+            )
+
+        )
+
+        fig2.add_trace(
+
+            go.Scatter(
+                x=forecast_df["Forecast Date"],
+                y=forecast_df["Predicted Sales"],
+                mode="lines+markers",
+                name="Forecasted Sales"
+            )
+
+        )
+
+        upper_bound = (
+            forecast_df["Predicted Sales"] + 5000
+        )
+
+        lower_bound = (
+            forecast_df["Predicted Sales"] - 5000
+        )
+
+        fig2.add_trace(
+
+            go.Scatter(
+                x=forecast_df["Forecast Date"],
+                y=upper_bound,
+                line=dict(width=0),
+                showlegend=False
+            )
+
+        )
+
+        fig2.add_trace(
+
+            go.Scatter(
+                x=forecast_df["Forecast Date"],
+                y=lower_bound,
+                fill="tonexty",
+                name="Confidence Interval",
+                opacity=0.2,
+                line=dict(width=0)
+            )
+
+        )
+
+        fig2.update_layout(
+
+            title="Historical vs Forecast Sales",
+
+            xaxis_title="Date",
+
+            yaxis_title="Sales",
+
+            template="plotly_dark",
+
+            height=650
+
+        )
+
+        st.plotly_chart(
+            fig2,
+            use_container_width=True
+        )
+
+        # =================================================
+        # DOWNLOAD BUTTON
+        # =================================================
+        csv = forecast_df.to_csv(index=False)
+
+        st.download_button(
+
+            label="📥 Download Forecast CSV",
+
+            data=csv,
+
+            file_name="forecast_results.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )
 
 # =========================================================
 # API SECTION
@@ -594,6 +835,13 @@ st.markdown("""
 # =========================================================
 st.markdown("---")
 
-st.markdown(
-    "🚀 AI Powered Time Series Forecasting System using Streamlit"
-)
+st.markdown("""
+<div style='text-align:center'>
+
+### 🚀 AI Forecasting Dashboard
+
+Built using:
+Python | Streamlit | Prophet | XGBoost | ARIMA | LSTM
+
+</div>
+""", unsafe_allow_html=True)

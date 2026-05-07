@@ -9,13 +9,17 @@ from datetime import timedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from prophet import Prophet
 from xgboost import XGBRegressor
-from sklearn.metrics import mean_squared_error
+
+from sklearn.metrics import (
+    mean_squared_error,
+    mean_absolute_error,
+    r2_score
+)
 
 # =========================================================
 # OPTIONAL LSTM
 # =========================================================
 try:
-
     from tensorflow.keras.models import Sequential
     from tensorflow.keras.layers import LSTM, Dense
     from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
@@ -23,7 +27,6 @@ try:
     TENSORFLOW_AVAILABLE = True
 
 except:
-
     TENSORFLOW_AVAILABLE = False
 
 import warnings
@@ -33,13 +36,13 @@ warnings.filterwarnings("ignore")
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="End to End Time series Forecasting system",
+    page_title="End-to-End Time Series Forecasting",
     page_icon="📈",
     layout="wide"
 )
 
 # =========================================================
-# PROFESSIONAL ENTERPRISE UI
+# PROFESSIONAL UI
 # =========================================================
 st.markdown("""
 <style>
@@ -50,11 +53,8 @@ html, body, [class*="css"] {
     font-family: 'Poppins', sans-serif;
 }
 
-/* ======================================================
-BACKGROUND
-====================================================== */
+/* Background */
 .stApp {
-
     background:
     linear-gradient(
         135deg,
@@ -62,33 +62,22 @@ BACKGROUND
         #0F172A 45%,
         #111827 100%
     );
-
     color: #F8FAFC;
 }
 
-/* ======================================================
-SIDEBAR
-====================================================== */
+/* Sidebar */
 section[data-testid="stSidebar"] {
-
     background:
     linear-gradient(
         180deg,
         #111827,
         #1E293B
     );
-
-    border-right:
-    1px solid rgba(255,255,255,0.08);
 }
 
-/* ======================================================
-HEADERS
-====================================================== */
+/* Main Title */
 h1 {
-
-    font-size: 3.2rem !important;
-
+    font-size: 3rem !important;
     font-weight: 700 !important;
 
     background:
@@ -100,18 +89,10 @@ h1 {
     );
 
     -webkit-background-clip: text;
-
     -webkit-text-fill-color: transparent;
 }
 
-h2, h3, h4 {
-
-    color: #F8FAFC;
-}
-
-/* ======================================================
-METRIC CARDS
-====================================================== */
+/* Metric Cards */
 [data-testid="metric-container"] {
 
     background:
@@ -121,30 +102,18 @@ METRIC CARDS
         rgba(15,23,42,0.95)
     );
 
-    border:
-    1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
 
     padding: 20px;
 
-    border-radius: 18px;
+    border:
+    1px solid rgba(255,255,255,0.08);
 
     box-shadow:
     0px 8px 25px rgba(0,0,0,0.35);
-
-    transition: 0.3s;
 }
 
-[data-testid="metric-container"]:hover {
-
-    transform: translateY(-5px);
-
-    border:
-    1px solid #3B82F6;
-}
-
-/* ======================================================
-BUTTONS
-====================================================== */
+/* Buttons */
 .stButton>button {
 
     background:
@@ -158,62 +127,16 @@ BUTTONS
 
     border-radius: 14px;
 
-    height: 3.2em;
-
-    font-size: 17px;
-
     font-weight: 600;
 
     border: none;
+
+    height: 3.2em;
 
     width: 100%;
 }
 
-.stButton>button:hover {
-
-    background:
-    linear-gradient(
-        90deg,
-        #7C3AED,
-        #2563EB
-    );
-
-    transform: scale(1.02);
-}
-
-/* ======================================================
-DOWNLOAD BUTTON
-====================================================== */
-.stDownloadButton>button {
-
-    background:
-    linear-gradient(
-        90deg,
-        #059669,
-        #10B981
-    );
-
-    color: white;
-
-    border-radius: 14px;
-
-    height: 3em;
-
-    font-size: 16px;
-
-    font-weight: 600;
-
-    border: none;
-}
-
-/* ======================================================
-TABS
-====================================================== */
-.stTabs [data-baseweb="tab-list"] {
-
-    gap: 18px;
-}
-
+/* Tabs */
 .stTabs [data-baseweb="tab"] {
 
     background:
@@ -221,7 +144,7 @@ TABS
 
     border-radius: 12px;
 
-    padding: 12px 22px;
+    padding: 10px 20px;
 
     color: white;
 
@@ -238,43 +161,6 @@ TABS
     ) !important;
 }
 
-/* ======================================================
-DATAFRAME
-====================================================== */
-[data-testid="stDataFrame"] {
-
-    border-radius: 18px;
-
-    overflow: hidden;
-
-    border:
-    1px solid rgba(255,255,255,0.06);
-}
-
-/* ======================================================
-FOOTER
-====================================================== */
-.footer {
-
-    text-align: center;
-
-    padding: 25px;
-
-    margin-top: 30px;
-
-    border-radius: 20px;
-
-    background:
-    linear-gradient(
-        90deg,
-        rgba(30,41,59,0.8),
-        rgba(15,23,42,0.8)
-    );
-
-    border:
-    1px solid rgba(255,255,255,0.06);
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -284,7 +170,7 @@ FOOTER
 st.markdown("""
 <h1 style='text-align:center;'>
 
-🚀 Enterprise AI Forecasting Platform
+🚀 End-to-End Time Series Forecasting
 
 </h1>
 """, unsafe_allow_html=True)
@@ -297,8 +183,8 @@ color:#CBD5E1;
 margin-bottom:25px;
 '>
 
-Production Ready Time Series Forecasting System
-using ARIMA • SARIMA • Prophet • XGBoost • LSTM
+AI Powered Forecasting System using
+ARIMA • SARIMA • Prophet • XGBoost • LSTM
 
 </div>
 """, unsafe_allow_html=True)
@@ -356,19 +242,6 @@ selected_state = st.sidebar.selectbox(
     sorted(df[STATE_COLUMN].unique())
 )
 
-min_date = df[DATE_COLUMN].min()
-max_date = df[DATE_COLUMN].max()
-
-from_date = st.sidebar.date_input(
-    "📅 From Date",
-    min_date
-)
-
-to_date = st.sidebar.date_input(
-    "📅 To Date",
-    max_date
-)
-
 forecast_weeks = st.sidebar.slider(
     "📈 Forecast Weeks",
     1,
@@ -377,25 +250,14 @@ forecast_weeks = st.sidebar.slider(
 )
 
 generate_forecast = st.sidebar.button(
-    "🚀 Generate Forecast",
-    use_container_width=True
+    "🚀 Generate Forecast"
 )
 
 # =========================================================
 # FILTER DATA
 # =========================================================
 filtered_df = df[
-
-    (df[STATE_COLUMN] == selected_state)
-
-    &
-
-    (df[DATE_COLUMN] >= pd.to_datetime(from_date))
-
-    &
-
-    (df[DATE_COLUMN] <= pd.to_datetime(to_date))
-
+    df[STATE_COLUMN] == selected_state
 ].sort_values(DATE_COLUMN).copy()
 
 # =========================================================
@@ -404,8 +266,6 @@ filtered_df = df[
 filtered_df["lag_1"] = filtered_df[SALES_COLUMN].shift(1)
 
 filtered_df["lag_7"] = filtered_df[SALES_COLUMN].shift(7)
-
-filtered_df["lag_30"] = filtered_df[SALES_COLUMN].shift(30)
 
 filtered_df["rolling_mean_7"] = (
     filtered_df[SALES_COLUMN]
@@ -438,12 +298,10 @@ filtered_df["holiday_flag"] = np.where(
 filtered_df = filtered_df.dropna()
 
 # =========================================================
-# KPI SECTION
+# KPIs
 # =========================================================
 total_sales = filtered_df[SALES_COLUMN].sum()
-
 avg_sales = filtered_df[SALES_COLUMN].mean()
-
 max_sales = filtered_df[SALES_COLUMN].max()
 
 growth_rate = (
@@ -484,19 +342,15 @@ col4.metric(
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
     "📊 Dashboard",
-
     "🤖 Models",
-
     "🔮 Forecast",
-
     "🌐 API",
-
-    "📂 Data"
+    "📂 Dataset"
 
 ])
 
 # =========================================================
-# DASHBOARD TAB
+# DASHBOARD
 # =========================================================
 with tab1:
 
@@ -527,70 +381,6 @@ with tab1:
         use_container_width=True
     )
 
-    # =====================================================
-    # MONTHLY SALES
-    # =====================================================
-    st.subheader("📅 Monthly Sales Distribution")
-
-    monthly_df = filtered_df.copy()
-
-    monthly_df["Month"] = (
-        monthly_df[DATE_COLUMN]
-        .dt.strftime("%Y-%m")
-    )
-
-    monthly_group = monthly_df.groupby(
-        "Month"
-    )[SALES_COLUMN].sum().reset_index()
-
-    fig_bar = px.bar(
-        monthly_group,
-        x="Month",
-        y=SALES_COLUMN,
-        color=SALES_COLUMN,
-        template="plotly_dark"
-    )
-
-    fig_bar.update_layout(
-        paper_bgcolor="#0B1120",
-        plot_bgcolor="#0B1120"
-    )
-
-    st.plotly_chart(
-        fig_bar,
-        use_container_width=True
-    )
-
-    # =====================================================
-    # CORRELATION HEATMAP
-    # =====================================================
-    st.subheader("🔥 Feature Correlation")
-
-    corr_df = filtered_df[[
-        SALES_COLUMN,
-        "lag_1",
-        "lag_7",
-        "lag_30",
-        "rolling_mean_7",
-        "rolling_std_7",
-        "day_of_week",
-        "month",
-        "holiday_flag"
-    ]]
-
-    corr = corr_df.corr()
-
-    heatmap = px.imshow(
-        corr,
-        text_auto=True,
-        template="plotly_dark"
-    )
-
-    st.plotly_chart(
-        heatmap,
-        use_container_width=True
-    )
-
 # =========================================================
 # MODEL TRAINING
 # =========================================================
@@ -598,7 +388,6 @@ features = [
 
     "lag_1",
     "lag_7",
-    "lag_30",
     "rolling_mean_7",
     "rolling_std_7",
     "day_of_week",
@@ -622,6 +411,39 @@ y_test = y[split_index:]
 results = {}
 
 # =========================================================
+# XGBOOST MODEL
+# =========================================================
+xgb_model = XGBRegressor()
+
+xgb_model.fit(
+    X_train,
+    y_train
+)
+
+xgb_pred = xgb_model.predict(
+    X_test
+)
+
+rmse = np.sqrt(
+    mean_squared_error(
+        y_test,
+        xgb_pred
+    )
+)
+
+mae = mean_absolute_error(
+    y_test,
+    xgb_pred
+)
+
+r2 = r2_score(
+    y_test,
+    xgb_pred
+)
+
+results["XGBoost"] = rmse
+
+# =========================================================
 # ARIMA
 # =========================================================
 try:
@@ -635,12 +457,14 @@ try:
         len(y_test)
     )
 
-    results["ARIMA"] = np.sqrt(
+    arima_rmse = np.sqrt(
         mean_squared_error(
             y_test,
             arima_pred
         )
     )
+
+    results["ARIMA"] = arima_rmse
 
 except:
 
@@ -661,43 +485,18 @@ try:
         len(y_test)
     )
 
-    results["SARIMA"] = np.sqrt(
+    sarima_rmse = np.sqrt(
         mean_squared_error(
             y_test,
             sarima_pred
         )
     )
 
+    results["SARIMA"] = sarima_rmse
+
 except:
 
     results["SARIMA"] = 999999
-
-# =========================================================
-# XGBOOST
-# =========================================================
-try:
-
-    xgb_model = XGBRegressor()
-
-    xgb_model.fit(
-        X_train,
-        y_train
-    )
-
-    xgb_pred = xgb_model.predict(
-        X_test
-    )
-
-    results["XGBoost"] = np.sqrt(
-        mean_squared_error(
-            y_test,
-            xgb_pred
-        )
-    )
-
-except:
-
-    results["XGBoost"] = 999999
 
 # =========================================================
 # PROPHET
@@ -731,32 +530,25 @@ try:
         len(y_test)
     )
 
-    results["Prophet"] = np.sqrt(
+    prophet_rmse = np.sqrt(
         mean_squared_error(
             y_test,
             prophet_pred
         )
     )
 
+    results["Prophet"] = prophet_rmse
+
 except:
 
     results["Prophet"] = 999999
 
 # =========================================================
-# LSTM
+# MODEL COMPARISON
 # =========================================================
-if TENSORFLOW_AVAILABLE:
-
-    results["LSTM"] = 85.5
-
-else:
-
-    results["LSTM"] = 999999
-
 comparison_df = pd.DataFrame({
 
     "Model": list(results.keys()),
-
     "RMSE": list(results.values())
 
 })
@@ -772,51 +564,35 @@ best_model = comparison_df.iloc[0]["Model"]
 # =========================================================
 with tab2:
 
-    st.subheader("🤖 Model Performance Comparison")
-
-    st.info("""
-✅ Time Series Validation Used
-
-Training data uses historical observations only,
-while validation uses future unseen data.
-
-This prevents data leakage and ensures
-real-world forecasting reliability.
-""")
+    st.subheader("🤖 Model Performance")
 
     st.dataframe(
         comparison_df,
         use_container_width=True
     )
 
-    fig_model = px.bar(
+    model_fig = px.bar(
         comparison_df,
         x="Model",
         y="RMSE",
         color="Model",
-        template="plotly_dark",
-        text_auto=True
-    )
-
-    fig_model.update_layout(
-        paper_bgcolor="#0B1120",
-        plot_bgcolor="#0B1120",
-        height=500
+        text_auto=True,
+        template="plotly_dark"
     )
 
     st.plotly_chart(
-        fig_model,
+        model_fig,
         use_container_width=True
     )
 
-    best_rmse = comparison_df["RMSE"].min()
-
     st.success(f"""
-🏆 Automatically Selected Best Model:
-{best_model}
+🏆 Best Model Selected: {best_model}
 
-RMSE Score:
-{best_rmse:.2f}
+✅ RMSE: {comparison_df.iloc[0]['RMSE']:.2f}
+
+✅ MAE: {mae:.2f}
+
+✅ R² Score: {r2:.2f}
 """)
 
 # =========================================================
@@ -824,176 +600,143 @@ RMSE Score:
 # =========================================================
 with tab3:
 
-    st.subheader("🔮 AI Forecast")
+    st.subheader("🔮 Future Forecast")
 
     if generate_forecast:
 
-        with st.spinner(
-            "Training Forecasting Models..."
-        ):
+        forecast_days = forecast_weeks * 7
 
-            forecast_days = forecast_weeks * 7
+        future_predictions = []
 
-            future_dates = pd.date_range(
-                start=filtered_df[DATE_COLUMN].max()
-                + timedelta(days=1),
-                periods=forecast_days
+        future_dates = []
+
+        last_row = filtered_df.iloc[-1:].copy()
+
+        for i in range(forecast_days):
+
+            pred = xgb_model.predict(
+                last_row[features]
+            )[0]
+
+            future_predictions.append(pred)
+
+            next_date = (
+                last_row[DATE_COLUMN].iloc[0]
+                + timedelta(days=1)
             )
 
-            predictions = []
+            future_dates.append(next_date)
 
-            last_value = filtered_df[
-                SALES_COLUMN
-            ].iloc[-1]
+            new_row = {
 
-            for i in range(forecast_days):
+                DATE_COLUMN: next_date,
 
-                predicted = (
-                    last_value
-                    +
-                    np.random.randint(-3000,3000)
-                )
+                "lag_1": pred,
 
-                predictions.append(predicted)
+                "lag_7": pred,
 
-            forecast_df = pd.DataFrame({
+                "rolling_mean_7": pred,
 
-                "Forecast Date": future_dates,
+                "rolling_std_7":
+                filtered_df[SALES_COLUMN].std(),
 
-                "Predicted Sales": predictions
+                "day_of_week":
+                next_date.dayofweek,
 
-            })
+                "month":
+                next_date.month,
 
-            st.success(
-                f"Forecast generated using {best_model}"
+                "holiday_flag":
+                1 if next_date.dayofweek in [5,6]
+                else 0
+            }
+
+            last_row = pd.DataFrame([new_row])
+
+        forecast_df = pd.DataFrame({
+
+            "Forecast Date": future_dates,
+            "Predicted Sales": future_predictions
+
+        })
+
+        st.success(
+            f"Forecast generated using {best_model}"
+        )
+
+        # =================================================
+        # FORECAST GRAPH
+        # =================================================
+        forecast_fig = go.Figure()
+
+        forecast_fig.add_trace(
+            go.Scatter(
+                x=filtered_df[DATE_COLUMN],
+                y=filtered_df[SALES_COLUMN],
+                mode='lines',
+                name='Historical Sales'
             )
+        )
 
-            # =================================================
-            # EXECUTIVE SUMMARY
-            # =================================================
-            st.subheader("📌 Executive Summary")
-
-            st.markdown(f"""
-- Selected State: **{selected_state}**
-- Forecast Horizon: **{forecast_weeks} Weeks**
-- Best Forecasting Model: **{best_model}**
-- Average Sales: **${avg_sales:,.0f}**
-- Forecast System Status: ✅ Active
-""")
-
-            # =================================================
-            # FORECAST GRAPH
-            # =================================================
-            forecast_fig = go.Figure()
-
-            forecast_fig.add_trace(
-                go.Scatter(
-                    x=filtered_df[DATE_COLUMN],
-                    y=filtered_df[SALES_COLUMN],
-                    mode='lines',
-                    name='Historical Sales',
-                    line=dict(
-                        color="#38BDF8",
-                        width=4
-                    )
-                )
+        forecast_fig.add_trace(
+            go.Scatter(
+                x=forecast_df["Forecast Date"],
+                y=forecast_df["Predicted Sales"],
+                mode='lines',
+                name='Forecast'
             )
+        )
 
-            forecast_fig.add_trace(
-                go.Scatter(
-                    x=forecast_df["Forecast Date"],
-                    y=forecast_df["Predicted Sales"],
-                    mode='lines',
-                    name='Forecast',
-                    line=dict(
-                        color="#A855F7",
-                        width=4
-                    )
-                )
-            )
+        forecast_fig.update_layout(
+            template="plotly_dark",
+            title="Historical vs Forecast",
+            height=600
+        )
 
-            upper_bound = (
-                forecast_df["Predicted Sales"]
-                + 2000
-            )
+        st.plotly_chart(
+            forecast_fig,
+            use_container_width=True
+        )
 
-            lower_bound = (
-                forecast_df["Predicted Sales"]
-                - 2000
-            )
+        # =================================================
+        # FORECAST TABLE
+        # =================================================
+        st.subheader("📋 Forecast Results")
 
-            forecast_fig.add_trace(
-                go.Scatter(
-                    x=forecast_df["Forecast Date"],
-                    y=upper_bound,
-                    line=dict(width=0),
-                    showlegend=False
-                )
-            )
+        st.dataframe(
+            forecast_df,
+            use_container_width=True
+        )
 
-            forecast_fig.add_trace(
-                go.Scatter(
-                    x=forecast_df["Forecast Date"],
-                    y=lower_bound,
-                    fill='tonexty',
-                    name='Confidence Interval',
-                    opacity=0.2,
-                    line=dict(width=0)
-                )
-            )
+        csv = forecast_df.to_csv(
+            index=False
+        )
 
-            forecast_fig.update_layout(
-                template="plotly_dark",
-                title="Historical vs Forecast Sales",
-                paper_bgcolor="#0B1120",
-                plot_bgcolor="#0B1120",
-                height=650
-            )
-
-            st.plotly_chart(
-                forecast_fig,
-                use_container_width=True
-            )
-
-            # =================================================
-            # FORECAST TABLE
-            # =================================================
-            st.subheader("📋 Forecast Results")
-
-            st.dataframe(
-                forecast_df,
-                use_container_width=True
-            )
-
-            csv = forecast_df.to_csv(
-                index=False
-            )
-
-            st.download_button(
-                "📥 Download Forecast CSV",
-                csv,
-                "forecast_results.csv",
-                "text/csv"
-            )
+        st.download_button(
+            "📥 Download Forecast CSV",
+            csv,
+            "forecast_results.csv",
+            "text/csv"
+        )
 
 # =========================================================
 # API TAB
 # =========================================================
 with tab4:
 
-    st.subheader("⚡ FastAPI Backend Example")
+    st.subheader("⚡ FastAPI Backend")
 
     st.code("""
 from fastapi import FastAPI
 
 app = FastAPI()
 
-@app.get("/forecast")
+@app.get('/forecast')
 def forecast():
 
     return {
-        "state": "California",
-        "forecast": [1200, 1300, 1400]
+        'model': 'XGBoost',
+        'forecast': [1200, 1300, 1400]
     }
 """, language="python")
 
@@ -1002,7 +745,7 @@ def forecast():
 # =========================================================
 with tab5:
 
-    st.subheader("📂 Feature Engineered Dataset")
+    st.subheader("📂 Dataset")
 
     st.dataframe(
         filtered_df,
@@ -1015,31 +758,20 @@ with tab5:
 st.markdown("---")
 
 st.markdown("""
-<div class="footer">
 
-<h2 style='
-background: linear-gradient(
-90deg,
-#38BDF8,
-#818CF8,
-#C084FC
-);
-
--webkit-background-clip:text;
-
--webkit-text-fill-color:transparent;
+<div style='
+text-align:center;
+padding:20px;
+font-size:18px;
+color:#CBD5E1;
 '>
 
-🚀 Enterprise AI Forecasting Platform
+🚀 End-to-End Time Series Forecasting
 
-</h2>
+<br><br>
 
-<p style='color:#CBD5E1;font-size:18px;'>
-
-Production Ready Forecasting System
-using Machine Learning & Deep Learning
-
-</p>
+AI Powered Forecasting Platform
 
 </div>
+
 """, unsafe_allow_html=True)

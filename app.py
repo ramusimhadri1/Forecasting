@@ -68,7 +68,7 @@ st.markdown("""
 # =========================================================
 # TITLE
 # =========================================================
-st.title("📈 AI Powered Time Series Forecasting System")
+st.title("End to End Time Series Forecasting System")
 
 st.markdown("""
 ### Production Ready Forecasting Dashboard

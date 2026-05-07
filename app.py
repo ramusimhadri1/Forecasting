@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
-    page_title="Enterprise AI Forecasting Platform",
+    page_title="End to End Time series Forecasting system",
     page_icon="📈",
     layout="wide"
 )
